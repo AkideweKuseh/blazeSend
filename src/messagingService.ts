@@ -242,26 +242,35 @@ export class ArkeselProvider implements ISMSProvider {
 
     async sendSMS(to: string, message: string): Promise<SendResult> {
         try {
-            const response = await axios.post(
-                'https://sms.arkesel.com/api/v2/sms/send',
-                {
-                    sender: this.config.senderId,
-                    message: message,
-                    recipients: [to],
-                },
-                {
-                    headers: {
-                        'api-key': this.config.apiKey,
-                        'Content-Type': 'application/json',
-                    },
-                }
+            // Arkesel uses query parameters, not JSON body
+            const params = new URLSearchParams({
+                action: 'send-sms',
+                api_key: this.config.apiKey,
+                to: to,
+                from: this.config.senderId,
+                sms: message,
+            });
+
+            const response = await axios.get(
+                `https://sms.arkesel.com/sms/api?${params.toString()}`
             );
 
-            return {
-                success: true,
-                message: 'SMS sent successfully via Arkesel',
-                data: response.data,
-            };
+            // Arkesel returns text response like "Successfully Sent" or JSON with status
+            const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+
+            if (responseText.includes('Successfully') || responseText.includes('success') ||
+                response.data?.code === '200' || response.data?.status === 'success') {
+                return {
+                    success: true,
+                    message: 'SMS sent successfully via Arkesel',
+                    data: response.data,
+                };
+            } else {
+                return {
+                    success: false,
+                    message: `Arkesel Error: ${response.data?.message || responseText}`,
+                };
+            }
         } catch (error: any) {
             return {
                 success: false,
@@ -777,6 +786,18 @@ export class MessagingService {
 
         // Store OTP
         await this.otpService.storeOTP(identifier, otp);
+
+        // 🔥 DEVELOPMENT MODE: Log OTP to console
+        if (process.env.NODE_ENV === 'development') {
+            console.log('\n' + '='.repeat(50));
+            console.log('🔐 OTP GENERATED (Development Mode)');
+            console.log('='.repeat(50));
+            console.log(`📱 To: ${identifier}`);
+            console.log(`🔢 OTP: ${otp}`);
+            console.log(`⏰ Expires in: 10 minutes`);
+            console.log(`📊 Channel: ${channel}`);
+            console.log('='.repeat(50) + '\n');
+        }
 
         // Send OTP via chosen channel
         let result: SendResult;
