@@ -572,6 +572,37 @@ otp:ratelimit:{identifier}     # Rate limit counter
 
 All keys have TTL (Time To Live) for automatic cleanup.
 
+### Monitoring Redis Data
+
+Use the included Redis viewer to inspect OTP records and rate limits:
+
+```bash
+node redis-viewer.js
+```
+
+The viewer displays:
+- **Active OTPs** - Current OTP hashes with expiration times
+- **Verification Attempts** - Wrong attempt counters (0-3)
+- **Rate Limits** - Request counts per identifier (0-3 per hour)
+
+**See [REDIS_VIEWER.md](REDIS_VIEWER.md) for detailed documentation.**
+
+**Example Output:**
+```
+📊 Total Keys: 3
+
+🔐 ACTIVE OTPs:
+📱 Identifier: 233555341041
+🔒 Hashed OTP: dcb614a0ec27d946...
+⏰ Expires in: 9 minutes 37 seconds
+
+⏱️ RATE LIMITS:
+📱 233555341041
+  OTPs sent: 2/3
+  Resets in: 53 minutes
+```
+
+
 ## 🔄 Adding New Providers
 
 To add a new SMS provider:
